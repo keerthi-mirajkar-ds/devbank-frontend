@@ -1,0 +1,24 @@
+version: 0.2
+
+phases:
+  pre_build:
+    commands:
+      - echo Logging in to DockerHub
+      - echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+      - IMAGE_TAG="${CODEBUILD_RESOLVED_SOURCE_VERSION:-latest}"
+  build:
+    commands:
+      - echo Building frontend image
+      - docker build --build-arg VITE_API_BASE_URL="$VITE_API_BASE_URL" -t "$DOCKERHUB_USERNAME/devbank-frontend:$IMAGE_TAG" .
+      - docker tag "$DOCKERHUB_USERNAME/devbank-frontend:$IMAGE_TAG" "$DOCKERHUB_USERNAME/devbank-frontend:latest"
+  post_build:
+    commands:
+      - echo Pushing frontend image
+      - docker push "$DOCKERHUB_USERNAME/devbank-frontend:$IMAGE_TAG"
+      - docker push "$DOCKERHUB_USERNAME/devbank-frontend:latest"
+      - printf '[{"name":"devbank-frontend","imageUri":"%s"}]' "$DOCKERHUB_USERNAME/devbank-frontend:$IMAGE_TAG" > imagedefinitions.json
+
+artifacts:
+  files:
+    - imagedefinitions.json
+
